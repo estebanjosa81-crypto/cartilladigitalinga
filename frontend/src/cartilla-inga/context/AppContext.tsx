@@ -52,6 +52,8 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   const [mostrarModalAuth, setMostrarModalAuth] = useState(false);
   const [mostrarModalStats, setMostrarModalStats] = useState(false);
   const [cargando, setCargando] = useState(true);
+  const [cargandoAuth, setCargandoAuth] = useState(false);
+  const [errorAuth, setErrorAuth] = useState<string | null>(null);
 
   // ============= ESTADOS DE NAVEGACIÓN =============
   const [vistaActual, setVistaActual] = useState<VistaActual>('inicio');
@@ -145,6 +147,8 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   const handleLogin = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.email || !formData.password) return;
+    setErrorAuth(null);
+    setCargandoAuth(true);
     try {
       const { token, usuario } = await authAPI.login(formData.email, formData.password);
       localStorage.setItem('token', token);
@@ -160,13 +164,17 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
 
       if (vistaActual === 'auth') setVistaActual('comunidad');
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Error al iniciar sesión');
+      setErrorAuth(err instanceof Error ? err.message : 'Error al iniciar sesión');
+    } finally {
+      setCargandoAuth(false);
     }
   }, [formData.email, formData.password, vistaActual]);
 
   const handleRegistro = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.email || !formData.password || !formData.nombre) return;
+    setErrorAuth(null);
+    setCargandoAuth(true);
     try {
       const { token, usuario } = await authAPI.registro(formData.nombre, formData.email, formData.password);
       localStorage.setItem('token', token);
@@ -182,7 +190,9 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
 
       if (vistaActual === 'auth') setVistaActual('comunidad');
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Error al registrarse');
+      setErrorAuth(err instanceof Error ? err.message : 'Error al registrarse');
+    } finally {
+      setCargandoAuth(false);
     }
   }, [formData.email, formData.password, formData.nombre, vistaActual]);
 
@@ -200,6 +210,8 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   }, []);
 
   const handleGoogleLogin = useCallback(async (credential: string) => {
+    setErrorAuth(null);
+    setCargandoAuth(true);
     try {
       const { token, usuario } = await authAPI.googleLogin(credential);
       localStorage.setItem('token', token);
@@ -215,7 +227,9 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
 
       if (vistaActual === 'auth') setVistaActual('comunidad');
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Error al iniciar sesión con Google');
+      setErrorAuth(err instanceof Error ? err.message : 'Error al iniciar sesión con Google');
+    } finally {
+      setCargandoAuth(false);
     }
   }, [vistaActual]);
 
@@ -260,8 +274,8 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
       return;
     }
     try {
-      const pubs = await comunidadAPI.listarPublicaciones();
-      setPublicaciones(pubs as Publicacion[]);
+      const { data } = await comunidadAPI.listarPublicaciones();
+      setPublicaciones(data as Publicacion[]);
     } catch (err) {
       console.error('Error cargando publicaciones:', err);
     }
@@ -345,7 +359,8 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   // ============= VALOR DEL CONTEXTO =============
   const contextValue = useMemo<AppContextType>(() => ({
     usuarioAutenticado, vistaAuth, mostrarPassword, formData, mostrarModalAuth,
-    mostrarModalStats, cargando, vistaActual, moduloActivo, menuAbierto,
+    mostrarModalStats, cargando, cargandoAuth, errorAuth,
+    vistaActual, moduloActivo, menuAbierto,
     modulos, topUsuarios, publicaciones, miembrosActivos,
     respuestaSeleccionada, mostrarResultado, paresSeleccionados, palabraActiva,
     puntos, diasSeguidos, palabrasAprendidas, retos, moduloActual,
@@ -357,7 +372,8 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     verificarRespuesta, seleccionarPalabra, reiniciarActividad,
   }), [
     usuarioAutenticado, vistaAuth, mostrarPassword, formData, mostrarModalAuth,
-    mostrarModalStats, cargando, vistaActual, moduloActivo, menuAbierto,
+    mostrarModalStats, cargando, cargandoAuth, errorAuth,
+    vistaActual, moduloActivo, menuAbierto,
     modulos, topUsuarios, publicaciones, miembrosActivos,
     respuestaSeleccionada, mostrarResultado, paresSeleccionados, palabraActiva,
     puntos, diasSeguidos, palabrasAprendidas, retos, moduloActual,

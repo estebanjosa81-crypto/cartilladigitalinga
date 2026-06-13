@@ -7,21 +7,19 @@ export const RegisterForm: React.FC = () => {
   const {
     formData,
     mostrarPassword,
+    cargandoAuth,
+    errorAuth,
     handleRegistro,
     handleGoogleLogin,
     setFormData,
     setMostrarPassword
   } = useAuth();
 
-  const handleGoogleError = () => {
-    alert('Error al registrarse con Google. Por favor intenta de nuevo.');
-  };
-
   return (
     <div className="space-y-5">
       <GoogleSignInButton
         onSuccess={handleGoogleLogin}
-        onError={handleGoogleError}
+        onError={() => {}}
         text="signup_with"
       />
 
@@ -35,6 +33,12 @@ export const RegisterForm: React.FC = () => {
       </div>
 
       <form onSubmit={handleRegistro} className="space-y-5">
+        {errorAuth && (
+          <div className="bg-red-50 border border-red-300 text-red-700 text-sm rounded-xl px-4 py-3">
+            {errorAuth}
+          </div>
+        )}
+
         <div>
           <label className="block text-sm font-semibold text-gray-700 mb-2">
             Nombre Completo
@@ -48,6 +52,7 @@ export const RegisterForm: React.FC = () => {
               className="w-full pl-11 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:border-emerald-500 focus:outline-none transition"
               placeholder="Tu nombre"
               required
+              disabled={cargandoAuth}
             />
           </div>
         </div>
@@ -65,6 +70,7 @@ export const RegisterForm: React.FC = () => {
               className="w-full pl-11 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:border-emerald-500 focus:outline-none transition"
               placeholder="tu@email.com"
               required
+              disabled={cargandoAuth}
             />
           </div>
         </div>
@@ -82,6 +88,7 @@ export const RegisterForm: React.FC = () => {
               className="w-full pl-11 pr-12 py-3 border-2 border-gray-200 rounded-xl focus:border-emerald-500 focus:outline-none transition"
               placeholder="••••••••"
               required
+              disabled={cargandoAuth}
             />
             <button
               type="button"
@@ -95,9 +102,10 @@ export const RegisterForm: React.FC = () => {
 
         <button
           type="submit"
-          className="w-full bg-gradient-to-r from-emerald-600 to-green-600 text-white font-bold py-3 rounded-xl hover:from-emerald-700 hover:to-green-700 transition shadow-lg"
+          disabled={cargandoAuth}
+          className="w-full bg-gradient-to-r from-emerald-600 to-green-600 text-white font-bold py-3 rounded-xl hover:from-emerald-700 hover:to-green-700 transition shadow-lg disabled:opacity-60 disabled:cursor-not-allowed"
         >
-          Crear Cuenta
+          {cargandoAuth ? 'Creando cuenta...' : 'Crear Cuenta'}
         </button>
       </form>
     </div>

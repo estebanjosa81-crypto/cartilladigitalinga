@@ -1,6 +1,10 @@
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+const REQUEST_TIMEOUT_MS = 15_000;
+
+// ── Token helpers ─────────────────────────────────────────────────────────────
 
 const getToken = (): string | null => localStorage.getItem('token');
+const clearToken = () => localStorage.removeItem('token');
 
 const headers = (withAuth = false): HeadersInit => {
   const h: HeadersInit = { 'Content-Type': 'application/json' };
@@ -11,11 +15,64 @@ const headers = (withAuth = false): HeadersInit => {
   return h;
 };
 
+// ── Error tipado ──────────────────────────────────────────────────────────────
+
+export class ApiError extends Error {
+  constructor(
+    public readonly status: number,
+    message: string,
+  ) {
+    super(message);
+    this.name = 'ApiError';
+  }
+  get isUnauthorized() { return this.status === 401; }
+  get isForbidden()    { return this.status === 403; }
+  get isNotFound()     { return this.status === 404; }
+  get isServerError()  { return this.status >= 500;  }
+}
+
+// ── Función base de petición ──────────────────────────────────────────────────
+
 const request = async <T>(path: string, options?: RequestInit): Promise<T> => {
-  const res = await fetch(`${API_URL}${path}`, options);
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error || 'Error en la solicitud');
-  return data as T;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+
+  try {
+    const res = await fetch(`${API_URL}${path}`, {
+      ...options,
+      signal: controller.signal,
+    });
+
+    // Si el servidor devuelve 401, limpiar sesión localmente
+    if (res.status === 401) {
+      clearToken();
+    }
+
+    let data: unknown;
+    const contentType = res.headers.get('content-type') || '';
+    if (contentType.includes('application/json')) {
+      data = await res.json();
+    } else {
+      data = await res.text();
+    }
+
+    if (!res.ok) {
+      const message = (data && typeof data === 'object' && 'error' in data)
+        ? String((data as Record<string, unknown>).error)
+        : 'Error en la solicitud';
+      throw new ApiError(res.status, message);
+    }
+
+    return data as T;
+  } catch (err) {
+    if (err instanceof ApiError) throw err;
+    if (err instanceof DOMException && err.name === 'AbortError') {
+      throw new ApiError(408, 'La solicitud tardó demasiado. Verifica tu conexión.');
+    }
+    throw new ApiError(0, 'Sin conexión. Verifica tu red e intenta de nuevo.');
+  } finally {
+    clearTimeout(timer);
+  }
 };
 
 // ============= AUTH =============
@@ -159,11 +216,15 @@ export interface ResultadoTraductorAPI {
 }
 
 export const traductorAPI = {
-  buscar: (q: string) =>
-    request<{ resultados: ResultadoTraductorAPI[]; total: number }>(
-      `/vocabulario/buscar?q=${encodeURIComponent(q)}`,
+  buscar: (q: string) => {
+    if (!q || q.trim().length < 2) {
+      return Promise.resolve({ resultados: [] as ResultadoTraductorAPI[], total: 0 });
+    }
+    return request<{ resultados: ResultadoTraductorAPI[]; total: number }>(
+      `/vocabulario/buscar?q=${encodeURIComponent(q.trim())}`,
       { headers: headers() }
-    ),
+    );
+  },
 };
 
 export const modulosAPI = {
@@ -221,9 +282,20 @@ export interface ComentarioAPI {
   creado_en: string;
 }
 
+export interface PaginatedResponse<T> {
+  data: T[];
+  page: number;
+  pageSize: number;
+  total: number;
+  hasMore: boolean;
+}
+
 export const comunidadAPI = {
-  listarPublicaciones: () =>
-    request<PublicacionAPI[]>('/comunidad/publicaciones', { headers: headers() }),
+  listarPublicaciones: (page = 1) =>
+    request<PaginatedResponse<PublicacionAPI>>(
+      `/comunidad/publicaciones?page=${page}`,
+      { headers: headers() }
+    ),
 
   crearPublicacion: (contenido: string) =>
     request<PublicacionAPI>('/comunidad/publicaciones', {
@@ -528,32 +600,40 @@ export const configAPI = {
     }),
 };
 
-export const uploadAPI = {
-  imagen: async (file: File): Promise<{ url: string; public_id: string }> => {
+const uploadFile = async (
+  endpoint: string,
+  fieldName: string,
+  file: File,
+): Promise<{ url: string; public_id: string }> => {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 60_000); // uploads can be slow
+  try {
     const formData = new FormData();
-    formData.append('imagen', file);
-    const res = await fetch(`${API_URL}/admin/upload/imagen`, {
+    formData.append(fieldName, file);
+    const res = await fetch(`${API_URL}${endpoint}`, {
       method: 'POST',
       headers: { Authorization: `Bearer ${getToken() ?? ''}` },
       body: formData,
+      signal: controller.signal,
     });
+    if (res.status === 401) clearToken();
     const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Error al subir imagen');
+    if (!res.ok) throw new ApiError(res.status, data.error || 'Error al subir archivo');
     return data as { url: string; public_id: string };
-  },
+  } catch (err) {
+    if (err instanceof ApiError) throw err;
+    if (err instanceof DOMException && err.name === 'AbortError') {
+      throw new ApiError(408, 'El archivo tardó demasiado en subirse.');
+    }
+    throw new ApiError(0, 'Sin conexión. Verifica tu red e intenta de nuevo.');
+  } finally {
+    clearTimeout(timer);
+  }
+};
 
-  audio: async (file: File): Promise<{ url: string; public_id: string }> => {
-    const formData = new FormData();
-    formData.append('audio', file);
-    const res = await fetch(`${API_URL}/admin/upload/audio`, {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${getToken() ?? ''}` },
-      body: formData,
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Error al subir audio');
-    return data as { url: string; public_id: string };
-  },
+export const uploadAPI = {
+  imagen: (file: File) => uploadFile('/admin/upload/imagen', 'imagen', file),
+  audio:  (file: File) => uploadFile('/admin/upload/audio',  'audio',  file),
 };
 
 export const seccionesAPI = {

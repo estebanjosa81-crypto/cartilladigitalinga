@@ -305,6 +305,17 @@ const TIPO_ACT_COLOR: Record<string, string> = {
 };
 
 // ── Autoplay: añade parámetros a URL de embed ──────────────────────────────
+const ALLOWED_VIDEO_HOSTS = ['youtube.com', 'www.youtube.com', 'youtu.be', 'player.vimeo.com', 'vimeo.com'];
+
+const safeVideoUrl = (url: string): string | null => {
+  try {
+    const { hostname } = new URL(url);
+    return ALLOWED_VIDEO_HOSTS.some(h => hostname === h || hostname.endsWith(`.${h}`)) ? url : null;
+  } catch {
+    return null;
+  }
+};
+
 const withAutoplay = (url: string): string => {
   if (!url) return url;
   const sep = url.includes('?') ? '&' : '?';
@@ -437,7 +448,11 @@ export const VistaModulo: React.FC = () => {
   useEffect(() => {
     if (!moduloActual) return;
     setModulo(null);
-    modulosAPI.obtener(moduloActual.clave).then(setModulo).catch(() => {});
+    const controller = new AbortController();
+    modulosAPI.obtener(moduloActual.clave).then(data => {
+      if (!controller.signal.aborted) setModulo(data);
+    }).catch(() => {});
+    return () => controller.abort();
   }, [moduloActual?.clave]);
 
   if (!moduloActual) return <div className="text-center py-12 text-slate-400">Cargando módulo…</div>;
@@ -528,12 +543,12 @@ export const VistaModulo: React.FC = () => {
 
         {/* Franja inferior: stats del contenido disponible */}
         <div className="bg-black/25 px-6 py-3 flex flex-wrap gap-2">
-          {modulo.video_url    && <StatBadge icon={Play}      label="Video" />}
+          {safeVideoUrl(modulo.video_url ?? '') && <StatBadge icon={Play} label="Video" />}
           {secciones.length  > 0 && <StatBadge icon={BookOpen}  label={`${secciones.length} sección${secciones.length > 1 ? 'es' : ''}`} />}
           {imagenes.length   > 0 && <StatBadge icon={ImageIcon} label={`${imagenes.length} imagen${imagenes.length > 1 ? 'es' : ''}`} />}
           {audios.length     > 0 && <StatBadge icon={Volume2}   label={`${audios.length} audio${audios.length > 1 ? 's' : ''}`} />}
           {actividades.length > 0 && <StatBadge icon={Zap}       label={`${actividades.length} actividad${actividades.length > 1 ? 'es' : ''}`} />}
-          {!modulo.video_url && secciones.length === 0 && imagenes.length === 0 && audios.length === 0 && actividades.length === 0 && (
+          {!safeVideoUrl(modulo.video_url ?? '') && secciones.length === 0 && imagenes.length === 0 && audios.length === 0 && actividades.length === 0 && (
             <span className="text-white/50 text-xs">Contenido próximamente</span>
           )}
         </div>
@@ -542,7 +557,7 @@ export const VistaModulo: React.FC = () => {
       {/* ══════════════════════════════════════════
           VIDEO
       ══════════════════════════════════════════ */}
-      {modulo.video_url && (
+      {safeVideoUrl(modulo.video_url ?? '') && (
         <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
           <div className="flex items-center gap-2 px-5 py-3 border-b border-slate-100">
             <div className="bg-emerald-100 p-1.5 rounded-lg">
@@ -551,7 +566,7 @@ export const VistaModulo: React.FC = () => {
             <span className="text-sm font-semibold text-slate-700">Video del módulo</span>
           </div>
           <div className="relative aspect-video bg-slate-900">
-            <iframe className="w-full h-full" src={withAutoplay(modulo.video_url)}
+            <iframe className="w-full h-full" src={withAutoplay(safeVideoUrl(modulo.video_url ?? '') ?? '')}
               title="Video educativo" frameBorder="0"
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
               allowFullScreen />
@@ -669,7 +684,7 @@ export const VistaModulo: React.FC = () => {
       )}
 
       {/* Sin contenido */}
-      {!modulo.video_url && secciones.length === 0 && imagenes.length === 0 && audios.length === 0 && actividades.length === 0 && (
+      {!safeVideoUrl(modulo.video_url ?? '') && secciones.length === 0 && imagenes.length === 0 && audios.length === 0 && actividades.length === 0 && (
         <div className="text-center py-12 text-slate-400 text-sm">
           Este módulo no tiene contenido publicado aún.
         </div>

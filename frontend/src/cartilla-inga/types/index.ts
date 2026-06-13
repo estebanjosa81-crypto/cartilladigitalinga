@@ -107,6 +107,8 @@ export interface AppState {
   mostrarModalAuth: boolean;
   mostrarModalStats: boolean;
   cargando: boolean;
+  cargandoAuth: boolean;
+  errorAuth: string | null;
 
   // Navegación
   vistaActual: VistaActual;

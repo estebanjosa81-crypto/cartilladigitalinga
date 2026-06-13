@@ -7,6 +7,8 @@ export const LoginForm: React.FC = () => {
   const {
     formData,
     mostrarPassword,
+    cargandoAuth,
+    errorAuth,
     handleLogin,
     handleGoogleLogin,
     setFormData,
@@ -14,7 +16,7 @@ export const LoginForm: React.FC = () => {
   } = useAuth();
 
   const handleGoogleError = () => {
-    alert('Error al iniciar sesión con Google. Por favor intenta de nuevo.');
+    // errorAuth state is set by handleGoogleLogin — no alert needed
   };
 
   return (
@@ -35,6 +37,12 @@ export const LoginForm: React.FC = () => {
       </div>
 
       <form onSubmit={handleLogin} className="space-y-5">
+        {errorAuth && (
+          <div className="bg-red-50 border border-red-300 text-red-700 text-sm rounded-xl px-4 py-3">
+            {errorAuth}
+          </div>
+        )}
+
         <div>
           <label className="block text-sm font-semibold text-gray-700 mb-2">
             Correo Electrónico
@@ -48,6 +56,7 @@ export const LoginForm: React.FC = () => {
               className="w-full pl-11 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:border-emerald-500 focus:outline-none transition"
               placeholder="tu@email.com"
               required
+              disabled={cargandoAuth}
             />
           </div>
         </div>
@@ -65,6 +74,7 @@ export const LoginForm: React.FC = () => {
               className="w-full pl-11 pr-12 py-3 border-2 border-gray-200 rounded-xl focus:border-emerald-500 focus:outline-none transition"
               placeholder="••••••••"
               required
+              disabled={cargandoAuth}
             />
             <button
               type="button"
@@ -78,9 +88,10 @@ export const LoginForm: React.FC = () => {
 
         <button
           type="submit"
-          className="w-full bg-gradient-to-r from-emerald-600 to-green-600 text-white font-bold py-3 rounded-xl hover:from-emerald-700 hover:to-green-700 transition shadow-lg"
+          disabled={cargandoAuth}
+          className="w-full bg-gradient-to-r from-emerald-600 to-green-600 text-white font-bold py-3 rounded-xl hover:from-emerald-700 hover:to-green-700 transition shadow-lg disabled:opacity-60 disabled:cursor-not-allowed"
         >
-          Ingresar
+          {cargandoAuth ? 'Ingresando...' : 'Ingresar'}
         </button>
       </form>
     </div>
