@@ -9,6 +9,20 @@ export default {
       screens: {
         'xs': '400px',
       },
+      colors: {
+        gov: {
+          green:        '#00833E',
+          'green-dark': '#005C2A',
+          'green-light':'#E6F4ED',
+          yellow:       '#F0A500',
+          'yellow-light':'#FFF8E7',
+          gray:         '#F5F5F5',
+          border:       '#D9D9D9',
+          dark:         '#1B2B1E',
+          text:         '#1A1A1A',
+          muted:        '#6B6B6B',
+        }
+      }
     },
   },
   plugins: [],
@@ -31,6 +45,18 @@ export default {
     },
     {
       pattern: /via-(emerald|green|amber|purple|pink|orange)-(400|500|600)/,
+    },
+    // Colores institucionales GOV
+    {
+      pattern: /bg-gov-(green|yellow|gray|dark|text|muted|border)/,
+      variants: ['hover', 'group-hover'],
+    },
+    {
+      pattern: /text-gov-(green|yellow|dark|text|muted)/,
+      variants: ['hover'],
+    },
+    {
+      pattern: /border-gov-(green|yellow|border)/,
     },
   ],
 }

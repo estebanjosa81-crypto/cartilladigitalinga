@@ -4,7 +4,47 @@ import { seccionesPublicAPI, BannerSlideAPI } from '../../services/api';
 
 const FADE_MS = 250;
 
-export const BannerCarrusel: React.FC = () => {
+const FALLBACK_SLIDES: BannerSlideAPI[] = [
+  {
+    id: -1,
+    titulo: 'Aprende la lengua Inga',
+    subtitulo: 'Videos, actividades interactivas y la sabiduría ancestral del pueblo Inga, ahora en digital',
+    imagen_url: null,
+    imagen_alt: null,
+    link_url: null,
+    orden: 1,
+  },
+  {
+    id: -2,
+    titulo: 'Actividades interactivas',
+    subtitulo: 'Completa y empareja palabras Inga para ganar puntos y avanzar más rápido',
+    imagen_url: null,
+    imagen_alt: null,
+    link_url: null,
+    orden: 2,
+  },
+  {
+    id: -3,
+    titulo: 'Comunidad Inga digital',
+    subtitulo: 'Conecta con otros aprendices, comparte experiencias y crece juntos',
+    imagen_url: null,
+    imagen_alt: null,
+    link_url: null,
+    orden: 3,
+  },
+];
+
+const FALLBACK_GRADIENTS = [
+  'linear-gradient(135deg, #005C2A 0%, #00833E 60%, #00a854 100%)',
+  'linear-gradient(135deg, #003d75 0%, #0066cc 60%, #0080ff 100%)',
+  'linear-gradient(135deg, #7B3500 0%, #c25500 60%, #e06600 100%)',
+];
+
+interface BannerCarruselProps {
+  noRounded?: boolean;
+}
+
+export const BannerCarrusel: React.FC<BannerCarruselProps> = ({ noRounded = false }) => {
   const [slides, setSlides] = useState<BannerSlideAPI[]>([]);
   const [current, setCurrent] = useState(0);
   const [visible, setVisible] = useState(true);
@@ -13,7 +53,9 @@ export const BannerCarrusel: React.FC = () => {
   const changingRef = useRef(false);
 
   useEffect(() => {
-    seccionesPublicAPI.getBanner().then(setSlides).catch(() => {});
+    seccionesPublicAPI.getBanner()
+      .then(data => setSlides(data.length > 0 ? data : FALLBACK_SLIDES))
+      .catch(() => setSlides(FALLBACK_SLIDES));
   }, []);
 
   const fadeTo = (idx: number) => {
@@ -27,21 +69,15 @@ export const BannerCarrusel: React.FC = () => {
     }, FADE_MS);
   };
 
-  const startTimer = (len: number, currentRef: React.MutableRefObject<number>) => {
-    if (timerRef.current) clearInterval(timerRef.current);
-    if (len <= 1) return;
-    timerRef.current = setInterval(() => {
-      const next = (currentRef.current + 1) % len;
-      fadeTo(next);
-    }, 5000);
-  };
-
-  // Use a ref to track current for the timer closure
   const currentRef = useRef(current);
   useEffect(() => { currentRef.current = current; }, [current]);
 
   useEffect(() => {
-    startTimer(slides.length, currentRef);
+    if (timerRef.current) clearInterval(timerRef.current);
+    if (slides.length <= 1) return;
+    timerRef.current = setInterval(() => {
+      fadeTo((currentRef.current + 1) % slides.length);
+    }, 4000);
     return () => { if (timerRef.current) clearInterval(timerRef.current); };
   }, [slides.length]);
 
@@ -50,7 +86,11 @@ export const BannerCarrusel: React.FC = () => {
   const go = (idx: number) => {
     if (timerRef.current) clearInterval(timerRef.current);
     fadeTo(idx);
-    startTimer(slides.length, currentRef);
+    if (slides.length > 1) {
+      timerRef.current = setInterval(() => {
+        fadeTo((currentRef.current + 1) % slides.length);
+      }, 4000);
+    }
   };
 
   const prev = () => go((current - 1 + slides.length) % slides.length);
@@ -74,14 +114,16 @@ export const BannerCarrusel: React.FC = () => {
   };
 
   const slide = slides[current];
+  const isFallback = slide.id < 0;
+  const fallbackIdx = isFallback ? Math.abs(slide.id) - 1 : 0;
 
   return (
     <div
-      className="relative w-full rounded-2xl shadow-lg overflow-hidden select-none bg-black"
+      className={`relative w-full overflow-hidden select-none bg-black ${noRounded ? '' : 'rounded-2xl shadow-lg'}`}
       onTouchStart={onTouchStart}
       onTouchEnd={onTouchEnd}
     >
-      {/* Imagen */}
+      {/* Imagen o gradiente */}
       <div
         className="w-full transition-opacity ease-in-out"
         style={{ opacity: visible ? 1 : 0, transitionDuration: `${FADE_MS}ms` }}
@@ -94,14 +136,27 @@ export const BannerCarrusel: React.FC = () => {
             draggable={false}
           />
         ) : (
-          <div className="w-full bg-gradient-to-r from-emerald-800 to-emerald-600" style={{ minHeight: 260 }} />
+          <div
+            className="w-full flex items-flex-end"
+            style={{
+              minHeight: 220,
+              background: FALLBACK_GRADIENTS[fallbackIdx % FALLBACK_GRADIENTS.length],
+            }}
+          >
+            {/* Tag institucional en la esquina */}
+            <div className="absolute top-4 left-5">
+              <span className="bg-[#F0A500] text-[#1A1A1A] text-[10px] font-bold px-2.5 py-1 rounded tracking-wide uppercase">
+                {fallbackIdx === 0 ? 'Nuevo' : fallbackIdx === 1 ? 'Actividades' : 'Comunidad'}
+              </span>
+            </div>
+          </div>
         )}
       </div>
 
-      {/* Overlay texto */}
+      {/* Overlay con texto */}
       {(slide.titulo || slide.subtitulo) && (
         <div
-          className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/65 via-black/25 to-transparent px-5 pb-5 pt-12 md:px-8 md:pb-7 transition-opacity ease-in-out"
+          className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent px-5 pb-5 pt-12 md:px-8 md:pb-7 transition-opacity ease-in-out"
           style={{ opacity: visible ? 1 : 0, transitionDuration: `${FADE_MS}ms` }}
         >
           {slide.titulo && (
@@ -110,14 +165,14 @@ export const BannerCarrusel: React.FC = () => {
             </h2>
           )}
           {slide.subtitulo && (
-            <p className="text-white/80 text-sm md:text-base mt-1 drop-shadow">
+            <p className="text-white/80 text-sm md:text-base mt-1 drop-shadow max-w-lg">
               {slide.subtitulo}
             </p>
           )}
         </div>
       )}
 
-      {/* Enlace */}
+      {/* Botón de enlace */}
       {slide.link_url && (
         <button
           className="absolute inset-0 w-full h-full cursor-pointer focus:outline-none"
@@ -144,13 +199,15 @@ export const BannerCarrusel: React.FC = () => {
             <ChevronRight className="w-5 h-5" />
           </button>
 
-          <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5 z-10">
+          <div className="absolute bottom-3 right-5 flex gap-1.5 z-10">
             {slides.map((_, i) => (
               <button
                 key={i}
                 onClick={() => go(i)}
                 className={`rounded-full transition-all duration-300 ${
-                  i === current ? 'w-5 h-2 bg-white' : 'w-2 h-2 bg-white/50 hover:bg-white/80'
+                  i === current
+                    ? 'w-5 h-2 bg-[#F0A500]'
+                    : 'w-2 h-2 bg-white/50 hover:bg-white/80'
                 }`}
                 aria-label={`Slide ${i + 1}`}
               />
