@@ -1,0 +1,47 @@
+import { useApp } from '../context/AppContext';
+
+export const useAuth = () => {
+  const {
+    usuarioAutenticado,
+    userRole,
+    vistaAuth,
+    mostrarPassword,
+    formData,
+    mostrarModalAuth,
+    mostrarModalStats,
+    puntos,
+    diasSeguidos,
+    palabrasAprendidas,
+    handleLogin,
+    handleRegistro,
+    handleLogout,
+    handleGoogleLogin,
+    solicitarAutenticacion,
+    setVistaAuth,
+    setMostrarPassword,
+    setFormData,
+    setMostrarModalStats,
+  } = useApp();
+
+  return {
+    usuarioAutenticado,
+    userRole,
+    vistaAuth,
+    mostrarPassword,
+    formData,
+    mostrarModalAuth,
+    mostrarModalStats,
+    puntos,
+    diasSeguidos,
+    palabrasAprendidas,
+    handleLogin,
+    handleRegistro,
+    handleLogout,
+    handleGoogleLogin,
+    solicitarAutenticacion,
+    setVistaAuth,
+    setMostrarPassword,
+    setFormData,
+    setMostrarModalStats,
+  };
+};

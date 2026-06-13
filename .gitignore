@@ -1,0 +1,59 @@
+# =====================================================
+# DEPENDENCIAS
+# =====================================================
+node_modules/
+.pnp
+.pnp.js
+
+# =====================================================
+# VARIABLES DE ENTORNO — NUNCA SUBIR AL REPO
+# =====================================================
+.env
+.env.local
+.env.*.local
+.env.production
+.env.staging
+.env.development.local
+.env.test.local
+.env.production.local
+
+# =====================================================
+# BUILD / DIST
+# =====================================================
+dist/
+dist-ssr/
+build/
+
+# =====================================================
+# LOGS
+# =====================================================
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# =====================================================
+# EDITORES
+# =====================================================
+.vscode/*
+!.vscode/extensions.json
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+.DS_Store
+Thumbs.db
+
+# =====================================================
+# TEMPORALES / SISTEMA
+# =====================================================
+*.local
+*.pid
+*.seed
+*.pid.lock
+coverage/
+.nyc_output/

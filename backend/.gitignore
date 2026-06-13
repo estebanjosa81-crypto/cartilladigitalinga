@@ -1,0 +1,14 @@
+# Dependencias
+node_modules/
+
+# Variables de entorno — contienen credenciales de DB, JWT y OAuth
+.env
+.env.*
+
+# Logs
+*.log
+logs/
+
+# Temporales
+*.pid
+*.pid.lock
