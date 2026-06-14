@@ -1,0 +1,64 @@
+services:
+
+  # ── Base de datos ─────────────────────────────────────────────────────────────
+  db:
+    image: mysql:8.0
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+      MYSQL_DATABASE:      ${DB_NAME}
+      MYSQL_USER:          ${DB_USER}
+      MYSQL_PASSWORD:      ${DB_PASSWORD}
+    volumes:
+      - db_data:/var/lib/mysql
+      - ./backend/cartilladigitalinga.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    ports:
+      - "3306:3306"       # exponer solo si necesitas acceder con cliente externo
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${DB_ROOT_PASSWORD}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  # ── Backend API ───────────────────────────────────────────────────────────────
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      NODE_ENV:         production
+      PORT:             3000
+      DB_HOST:          db
+      DB_PORT:          3306
+      DB_USER:          ${DB_USER}
+      DB_PASSWORD:      ${DB_PASSWORD}
+      DB_NAME:          ${DB_NAME}
+      DB_CONNECTION_LIMIT: 20
+      JWT_SECRET:       ${JWT_SECRET}
+      JWT_EXPIRES_IN:   7d
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
+      ALLOWED_ORIGINS:  ${ALLOWED_ORIGINS}
+      # Cloudinary se configura desde el panel Admin → tabla `configuracion`
+    # No exponer puerto al host — solo Nginx necesita accederlo internamente
+
+  # ── Frontend (Nginx + React build) ───────────────────────────────────────────
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_API_URL:          /api
+        VITE_GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "80:80"
+
+volumes:
+  db_data:
